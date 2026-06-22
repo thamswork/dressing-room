@@ -1,0 +1,74 @@
+:root {
+  --font-display: "Fraunces", "Times New Roman", serif;
+  --font-body: "Inter", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", "SF Mono", Menlo, monospace;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: #0a0a0a;
+  color: #f5f3ee;
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+/* Hairline rule, used instead of borders/shadows throughout */
+.hr-line {
+  height: 1px;
+  background-color: #2a2926;
+  border: none;
+}
+
+/* Visible keyboard focus, no glow, just a clean offset ring in bone */
+:focus-visible {
+  outline: 1px solid #f5f3ee;
+  outline-offset: 3px;
+}
+
+input[type="text"],
+input[type="date"],
+input[type="time"] {
+  background: transparent;
+  color: #f5f3ee;
+}
+
+input::placeholder {
+  color: #5b5750;
+}
+
+/* Remove default date/time picker chrome tinting in dark mode where possible */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.85);
+  opacity: 0.7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Custom scrollbar for the autocomplete dropdown — thin, monochrome */
+.thin-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background-color: #3a3835;
+}
+.thin-scroll::-webkit-scrollbar-track {
+  background-color: transparent;
+}

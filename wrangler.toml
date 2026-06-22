@@ -1,0 +1,14 @@
+name = "dressing-room-worker"
+main = "backend/index.ts"
+compatibility_date = "2024-09-23"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "dressing-room-db"
+database_id = "f21b7675-0f6b-44a7-ba65-01472c6facf2"
+
+[vars]
+ASTROLOGY_API_HOST = "astrologer.p.rapidapi.com"
+
+# Set the real key as a secret, never commit it:
+#   wrangler secret put ASTROLOGY_API_KEY
