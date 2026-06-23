@@ -46,6 +46,13 @@ interface ElementBalance {
   water: number;
 }
 
+interface ThaiDayInfo {
+  dayName: string;
+  color: ColorCategory;
+  avoid: ColorCategory;
+  note: string;
+}
+
 interface DailyState {
   date: string;
   vibe: { text: string };
@@ -58,6 +65,7 @@ interface DailyState {
   hair: { directive: "up" | "down"; label: string };
   dominantElement: string;
   elementBalance: ElementBalance;
+  thai?: ThaiDayInfo;
   cached: boolean;
 }
 
@@ -614,9 +622,26 @@ function DailyDetail({ state }: { state: DailyState }) {
         </div>
       </section>
 
-      {/* ----- Panel 03: Hairstyle ----- */}
+      {/* ----- Panel 03: Thai birth-day colour (traditional reference) ----- */}
+      {/* Defensive: if this ever arrives without `thai` (e.g. a transient
+          upstream error slipped past an earlier check), skip the panel
+          instead of crashing the whole dashboard. */}
+      {state.thai && (
+        <section className="mb-12">
+          <PanelLabel index="03" title={`Thai colour — ${state.thai.dayName}`} />
+          <div className="grid grid-cols-2 gap-5 mt-5">
+            <ColorCategoryBlock label="Wear" category={state.thai.color} />
+            <ColorCategoryBlock label="Avoid" category={state.thai.avoid} muted />
+          </div>
+          <p className="text-ash text-xs leading-relaxed mt-4 italic">
+            {state.thai.note}
+          </p>
+        </section>
+      )}
+
+      {/* ----- Panel 04: Hairstyle ----- */}
       <section className="mb-12">
-        <PanelLabel index="03" title="Hairstyle directive" />
+        <PanelLabel index="04" title="Hairstyle directive" />
         <div className="mt-5 flex items-center gap-5">
           <div className="border border-line p-4">
             <HairGlyph direction={state.hair.directive} size={36} />
@@ -629,7 +654,7 @@ function DailyDetail({ state }: { state: DailyState }) {
 
       {/* ----- Element balance ----- */}
       <section>
-        <PanelLabel index="04" title="Element balance" />
+        <PanelLabel index="05" title="Element balance" />
         <div className="mt-5 flex items-center justify-center">
           <ElementCompass balance={state.elementBalance} size={140} />
         </div>
@@ -741,12 +766,21 @@ function DayCard({ state }: { state: DailyState }) {
         &ldquo;{state.vibe.text}&rdquo;
       </p>
 
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-3">
         <MiniSwatch hex={state.colors.work.hex} label="Work" />
         <MiniSwatch hex={state.colors.charm.hex} label="Charm" />
         <MiniSwatch hex={state.colors.health.hex} label="Health" />
         <MiniSwatch hex={state.colors.avoid.hex} label="Avoid" />
       </div>
+
+      {state.thai && (
+        <div className="flex items-center gap-2 mb-4">
+          <MiniSwatch hex={state.thai.color.hex} label={`Thai — ${state.thai.dayName}`} />
+          <p className="font-mono text-[9px] text-ash uppercase tracking-widest2">
+            Thai ref.
+          </p>
+        </div>
+      )}
 
       <div className="flex items-center gap-2">
         <HairGlyph direction={state.hair.directive} size={18} />

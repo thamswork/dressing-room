@@ -90,6 +90,12 @@ type DailyStatePayload = {
   hair: { directive: "up" | "down"; label: string };
   dominantElement: string;
   elementBalance: ElementBalance;
+  thai: {
+    dayName: string;
+    color: ColorCategory;
+    avoid: ColorCategory;
+    note: string;
+  };
   cached: boolean;
 };
 
@@ -173,8 +179,61 @@ const VIBE_LINES: Record<ElementKey, string[]> = {
 };
 
 // ---------------------------------------------------------------------
-// Helpers
+// Thai birth-day colour table (สีประจำวันเกิด) — traditional reference
 // ---------------------------------------------------------------------
+// IMPORTANT HONESTY NOTE: Thai birth-day colour belief is oral/temple
+// tradition, not a single codified standard. Different sources (general
+// lifestyle media vs. the more formal Thaksapakorn astrological system)
+// give different answers, especially for "avoid" colours. The table below
+// reflects the version most consistently repeated across general Thai
+// lifestyle sources (the same one widely cited in popular references). It
+// is presented to users as "a traditional reference," not as the single
+// definitive answer — see the `note` field, surfaced directly in the UI.
+//
+// Keyed by JS Date.getDay(): 0=Sunday ... 6=Saturday.
+type ThaiDayColor = { hex: string; name: string; avoidHex: string; avoidName: string };
+
+const THAI_DAY_COLORS: Record<number, ThaiDayColor> = {
+  0: { hex: "#FF8C00", name: "Orange (red-orange)", avoidHex: "#1F3B73", avoidName: "Blue" }, // Sunday
+  1: { hex: "#F7E967", name: "Yellow", avoidHex: "#A8332B", avoidName: "Red" }, // Monday
+  2: { hex: "#F4A6C1", name: "Pink", avoidHex: "#E8E4DA", avoidName: "White" }, // Tuesday
+  3: { hex: "#4F9D55", name: "Green", avoidHex: "#D98BB0", avoidName: "Pink" }, // Wednesday
+  4: { hex: "#E0801F", name: "Orange", avoidHex: "#1A1A1A", avoidName: "Black" }, // Thursday
+  5: { hex: "#3D6FB4", name: "Blue", avoidHex: "#6B6B6B", avoidName: "Grey" }, // Friday
+  6: { hex: "#4B3A6E", name: "Purple", avoidHex: "#3D5A3D", avoidName: "Green" }, // Saturday
+};
+
+const THAI_DAY_NAMES: Record<number, string> = {
+  0: "Sunday", 1: "Monday", 2: "Tuesday", 3: "Wednesday",
+  4: "Thursday", 5: "Friday", 6: "Saturday",
+};
+
+const THAI_REFERENCE_NOTE =
+  "Traditional Thai birth-day colour belief varies by source and region. This reflects a commonly cited popular version, not a single official standard.";
+
+/** Day-of-week index (0=Sunday) for a YYYY-MM-DD date string, independent of timezone math (pure calendar lookup). */
+function weekdayIndex(dateStr: string): number {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+}
+
+function thaiColorForDate(dateStr: string): {
+  dayName: string;
+  color: { hex: string; name: string };
+  avoid: { hex: string; name: string };
+  note: string;
+} {
+  const idx = weekdayIndex(dateStr);
+  const entry = THAI_DAY_COLORS[idx];
+  return {
+    dayName: THAI_DAY_NAMES[idx],
+    color: { hex: entry.hex, name: entry.name },
+    avoid: { hex: entry.avoidHex, name: entry.avoidName },
+    note: THAI_REFERENCE_NOTE,
+  };
+}
+
+
 
 function uuid(): string {
   return crypto.randomUUID();
@@ -273,7 +332,8 @@ async function fetchTransitPlacements(
   });
 
   if (!res.ok) {
-    throw new Error(`astrology feed responded ${res.status}`);
+    const errorText = await res.text();
+    throw new Error(`astrology feed responded ${res.status}: ${errorText}`);
   }
 
   const data: any = await res.json();
@@ -420,6 +480,7 @@ function rowToPayload(row: DailyStateRow): DailyStatePayload {
     },
     dominantElement: row.dominant_element,
     elementBalance: JSON.parse(row.element_balance),
+    thai: thaiColorForDate(row.state_date),
     cached: true,
   };
 }
@@ -492,6 +553,7 @@ async function getOrComputeState(
     },
     dominantElement: newState.dominant_element,
     elementBalance: balance,
+    thai: thaiColorForDate(newState.state_date),
     cached: false,
   };
 }
@@ -573,7 +635,15 @@ app.post("/api/users", async (c) => {
     return c.json({ error: "Failed to create user.", detail: String(err) }, 500);
   }
 
-  return c.json({ id, name: body.name, birth_place: body.birth_place }, 201);
+  return c.json(
+    {
+      id,
+      name: body.name,
+      birth_place: body.birth_place,
+      birthDayThai: thaiColorForDate(body.birth_date),
+    },
+    201
+  );
 });
 
 // ---- GET /api/users/:id -------------------------------------------------
@@ -581,7 +651,12 @@ app.get("/api/users/:id", async (c) => {
   const id = c.req.param("id");
   const row = await c.env.DB.prepare(`SELECT * FROM users WHERE id = ?`).bind(id).first<UserRow>();
   if (!row) return c.json({ error: "User not found." }, 404);
-  return c.json(row);
+
+  // Birth-day colour is fixed for life — derived once from their birth date's
+  // weekday, same traditional reference table used for "today's" colour.
+  const birthDayThai = thaiColorForDate(row.birth_date);
+
+  return c.json({ ...row, birthDayThai });
 });
 
 // ---- GET /api/users/:id/today -------------------------------------------
